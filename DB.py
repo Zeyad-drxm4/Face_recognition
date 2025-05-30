@@ -74,13 +74,26 @@ def insert_students(ID, name, email,department_name):
         print(f'Failed to insert student: {name}, {email}')
 
 
-def insert_instructor(name, hiredate , department,salary, email,password):
-    q = "INSERT INTO instructors (Name,hiredate,deparatment,salary,Email,password) VALUES (?, ?, ?,?,?,?)"
-    result = db_query(q, (name, name, email))
-    if result is None:
-        print(f'Failed to insert instructor: {name}, {email}')
+def insert_instructor(ID, name, hiredate, departments, salary, email, password):
+    g0 = "SELECT department_id FROM Departments WHERE dep_name = ?"
+    department_result = db_query(g0, (departments,))
+    if not department_result:
+        print(f"Department '{departments}' not found")
+        return
+
+    department = department_result[0][0]
+    g = """SET IDENTITY_INSERT Instructors ON;
+           INSERT INTO Instructors 
+           (instructor_id, in_name, hire_date, department_id, salary, email, password) 
+           VALUES (?, ?, ?, ?, ?, ?, ?);
+           SET IDENTITY_INSERT Instructors OFF;"""
+    result = db_query(g, (ID, name, hiredate, department, salary, email, password))
 
 def get_user_by_id(ID):
+    q = "SELECT * FROM Users WHERE ID = ?"
+    result = db_query(q, (ID,))
+    return result
+def get_students(ID):
     q = "SELECT * FROM Users WHERE ID = ?"
     result = db_query(q, (ID,))
     return result
@@ -136,8 +149,44 @@ def mark_attendance(student_id, course_name):
 
     print("Attendance Taken")
 
+def enroll_student_db(student_id, course_id, enrollment_date):
+    # First check if student exists
+    s_check = "SELECT 1 FROM Students WHERE student_id = ?"
+    student_exists = db_query(s_check, (student_id,))
+    if not student_exists:
+        print(f"Student ID {student_id} not found")
+        return
+
+    # Then check if course exists
+    c_check = "SELECT 1 FROM Courses WHERE course_id = ?"
+    course_exists = db_query(c_check, (course_id,))
+    if not course_exists:
+        print(f"Course ID {course_id} not found")
+        return
+
+    # Check if already enrolled
+    e_check = "SELECT 1 FROM Enrollments WHERE student_id = ? AND course_id = ?"
+    already_enrolled = db_query(e_check, (student_id, course_id))
+    if already_enrolled:
+        print(f"Student {student_id} is already enrolled in course {course_id}")
+        return
+
+    # Insert enrollment
+    q = """
+    INSERT INTO Enrollments (student_id, course_id, enrollment_date)
+    VALUES (?, ?, ?)
+    """
+    result = db_query(q, (student_id, course_id, enrollment_date))
+    if result:
+        print(f"Successfully enrolled student {student_id} in course {course_id}")
+        return
+    else:
+        print("Failed to enroll student")
+
 
 if __name__ == '__main__':
     students = (1,9)
     # mark_attendance(students, "Introduction to Programming")
-    insert_students(1,"Mos","mail","Computer Science")
+    insert_students(1,"mos","mail","CS")
+
+
